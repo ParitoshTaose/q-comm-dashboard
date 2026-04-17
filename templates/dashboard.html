@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Impulse Recommendation System</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+  <link href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css" rel="stylesheet">
+  <link href="/static/css/dashboard.css" rel="stylesheet">
+</head>
+<body>
+
+<!-- Header -->
+<header class="app-header">
+  <div class="header-inner">
+    <div class="header-brand">
+      <div class="brand-logo">IRS</div>
+      <div class="brand-text">
+        <div class="brand-title">Impulse Recommendation System</div>
+        <div class="brand-sub">Q-Commerce Intelligence Platform</div>
+      </div>
+    </div>
+    <div class="header-meta">
+      <span class="status-dot"></span>
+      <span class="status-text">Live</span>
+    </div>
+  </div>
+</header>
+
+<!-- Nav Tabs -->
+<nav class="tab-nav">
+  <div class="tab-nav-inner">
+    <ul class="nav nav-tabs" id="mainTabs">
+      <li class="nav-item">
+        <a class="nav-link active" data-bs-toggle="tab" href="#tab-session">Session Recommendations</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#tab-user">User Recommendations</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#tab-stock" id="stockTab">Region Stock Planner</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#tab-analytics" id="analyticsTab">Analytics Overview</a>
+      </li>
+    </ul>
+  </div>
+</nav>
+
+<main class="main-content">
+<div class="tab-content">
+
+<!-- ════════ TAB 1: SESSION ════════ -->
+<div class="tab-pane fade show active" id="tab-session">
+  <div class="section-card">
+    <div class="section-header">
+      <h2 class="section-title">Session Lookup</h2>
+      <span class="section-hint">Retrieve ML-powered impulse recommendations for a specific session</span>
+    </div>
+    <div class="row g-3 align-items-end">
+      <div class="col-auto">
+        <label class="form-label-custom">Session ID</label>
+        <input type="number" id="sessionInput" class="form-control form-control-custom" value="6" min="1" style="width:140px">
+      </div>
+      <div class="col-auto">
+        <label class="form-label-custom">Top K Results</label>
+        <input type="number" id="sessionTopK" class="form-control form-control-custom" value="10" min="1" max="50" style="width:90px">
+      </div>
+      <div class="col-auto">
+        <button class="btn btn-primary-custom" onclick="loadSessionReco()">&#9654; Get Recommendations</button>
+      </div>
+      <div class="col-auto">
+        <button class="btn btn-outline-custom" onclick="clearSection('sessionResults','sessionError')">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="sessionLoading" class="loading-block section-card" style="display:none">
+    <div class="spinner-border text-primary" role="status"></div>
+    <span>Fetching session recommendations...</span>
+  </div>
+  <div id="sessionError" class="section-card alert-custom" style="display:none"></div>
+
+  <div id="sessionResults" style="display:none">
+    <div class="section-card" style="padding:14px 20px">
+      <div id="sessionMeta" class="meta-badges"></div>
+    </div>
+    <div class="row g-3 mb-3">
+      <div class="col-md-3"><div class="kpi-card" id="sKpi1"></div></div>
+      <div class="col-md-3"><div class="kpi-card success-border" id="sKpi2"></div></div>
+      <div class="col-md-3"><div class="kpi-card warning-border" id="sKpi3"></div></div>
+      <div class="col-md-3"><div class="kpi-card danger-border" id="sKpi4"></div></div>
+    </div>
+    <div class="row g-4 mb-4">
+      <div class="col-md-5">
+        <div class="chart-box">
+          <div class="chart-title">Impulse Score — Top Products</div>
+          <div id="sessionScoreChart" class="chart-div" style="height:240px"></div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="chart-box">
+          <div class="chart-title">Recommendation Sources</div>
+          <div id="sessionSourcePie" class="chart-div" style="height:240px"></div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="chart-box">
+          <div class="chart-title">Avg Impulse Score</div>
+          <div id="sessionGauge" class="chart-div" style="height:240px"></div>
+        </div>
+      </div>
+    </div>
+    <div class="cluster-banner mb-3" id="sessionClusterBanner"></div>
+    <div class="section-card">
+      <div class="section-header">
+        <h2 class="section-title">Recommended Products</h2>
+        <span id="sessionRecoCount" class="badge-custom badge-blue"></span>
+      </div>
+      <div class="table-responsive">
+        <table id="sessionRecoTable" class="table table-custom display" style="width:100%">
+          <thead><tr><th>Rank</th><th>Product ID</th><th>Category</th><th>Price</th><th>Impulse Score</th><th>Signal</th><th>Score Bar</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ TAB 2: USER ════════ -->
+<div class="tab-pane fade" id="tab-user">
+  <div class="section-card">
+    <div class="section-header">
+      <h2 class="section-title">User Lookup</h2>
+      <span class="section-hint">Cross-session personalized recommendations aggregated from a user's full history</span>
+    </div>
+    <div class="row g-3 align-items-end">
+      <div class="col-auto">
+        <label class="form-label-custom">User ID</label>
+        <input type="number" id="userInput" class="form-control form-control-custom" value="6638" min="1" style="width:140px">
+      </div>
+      <div class="col-auto">
+        <label class="form-label-custom">Top K Results</label>
+        <input type="number" id="userTopK" class="form-control form-control-custom" value="10" min="1" max="50" style="width:90px">
+      </div>
+      <div class="col-auto">
+        <button class="btn btn-secondary-custom" onclick="loadUserReco()">&#9654; Get Recommendations</button>
+      </div>
+      <div class="col-auto">
+        <button class="btn btn-outline-custom" onclick="clearSection('userResults','userError')">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="userLoading" class="loading-block section-card" style="display:none">
+    <div class="spinner-border" style="color:#2c3e50" role="status"></div>
+    <span>Analyzing user session history...</span>
+  </div>
+  <div id="userError" class="section-card alert-custom" style="display:none"></div>
+
+  <div id="userResults" style="display:none">
+    <div class="section-card" style="padding:14px 20px">
+      <div id="userMeta" class="meta-badges"></div>
+    </div>
+    <div class="row g-3 mb-3">
+      <div class="col-md-3"><div class="kpi-card" id="uKpi1"></div></div>
+      <div class="col-md-3"><div class="kpi-card success-border" id="uKpi2"></div></div>
+      <div class="col-md-3"><div class="kpi-card warning-border" id="uKpi3"></div></div>
+      <div class="col-md-3"><div class="kpi-card danger-border" id="uKpi4"></div></div>
+    </div>
+    <div class="row g-4 mb-4">
+      <div class="col-md-5">
+        <div class="chart-box">
+          <div class="chart-title">Impulse Score — Top Products</div>
+          <div id="userScoreChart" class="chart-div" style="height:240px"></div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="chart-box">
+          <div class="chart-title">Recommendation Sources</div>
+          <div id="userSourcePie" class="chart-div" style="height:240px"></div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="chart-box">
+          <div class="chart-title">Avg Impulse Score</div>
+          <div id="userGauge" class="chart-div" style="height:240px"></div>
+        </div>
+      </div>
+    </div>
+    <div class="cluster-banner mb-3" id="userClusterBanner"></div>
+    <div class="section-card">
+      <div class="section-header">
+        <h2 class="section-title">Recommended Products</h2>
+        <span id="userRecoCount" class="badge-custom badge-blue"></span>
+      </div>
+      <div class="table-responsive">
+        <table id="userRecoTable" class="table table-custom display" style="width:100%">
+          <thead><tr><th>Rank</th><th>Product ID</th><th>Category</th><th>Price</th><th>Impulse Score</th><th>Signal</th><th>Score Bar</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ TAB 3: STOCK PLANNER ════════ -->
+<div class="tab-pane fade" id="tab-stock">
+  <div class="section-card">
+    <div class="section-header">
+      <h2 class="section-title">Stock Planning Parameters</h2>
+    </div>
+    <div class="row g-3 align-items-end">
+      <div class="col-auto">
+        <label class="form-label-custom">Location</label>
+        <select id="locationSelect" class="form-select form-control-custom" style="min-width:180px">
+          {% for loc in locations %}<option value="{{ loc }}">{{ loc }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <label class="form-label-custom">Top K Products</label>
+        <input type="number" id="stockTopK" class="form-control form-control-custom" value="15" min="1" max="50" style="width:90px">
+      </div>
+      <div class="col-auto">
+        <label class="form-label-custom">Min ML Score</label>
+        <input type="number" id="minScore" class="form-control form-control-custom" value="0.3" min="0" max="1" step="0.05" style="width:90px">
+      </div>
+      <div class="col-auto">
+        <button class="btn btn-primary-custom" onclick="loadStock()">&#9654; Generate Plan</button>
+      </div>
+      <div class="col-auto">
+        <button class="btn btn-success-custom" id="exportBtn" onclick="exportCSV()" style="display:none">&#8595; Export CSV</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="stockLoading" class="loading-block section-card" style="display:none">
+    <div class="spinner-border text-primary" role="status"></div>
+    <span>Generating stock plan...</span>
+  </div>
+  <div id="stockError" class="section-card alert-custom" style="display:none"></div>
+
+  <div id="stockResults" style="display:none">
+    <div class="row g-3 mb-3" id="stockKpiRow"></div>
+    <div class="row g-4 mb-4">
+      <div class="col-md-7">
+        <div class="chart-box">
+          <div class="chart-title">Recommended Stock Quantities — Top 10 Products</div>
+          <div id="stockQtyChart" class="chart-div" style="height:300px"></div>
+        </div>
+      </div>
+      <div class="col-md-5">
+        <div class="chart-box">
+          <div class="chart-title">Category Distribution (by stock units)</div>
+          <div id="catPieChart" class="chart-div" style="height:300px"></div>
+        </div>
+      </div>
+    </div>
+    <div class="row g-4 mb-4">
+      <div class="col-md-6">
+        <div class="chart-box">
+          <div class="chart-title">Avg Impulse Score by Category</div>
+          <div id="catScoreChart" class="chart-div" style="height:240px"></div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="chart-box">
+          <div class="chart-title">Total Sold vs Recommended Stock Qty</div>
+          <div id="soldVsStockChart" class="chart-div" style="height:240px"></div>
+        </div>
+      </div>
+    </div>
+    <div class="section-card">
+      <div class="section-header">
+        <h2 class="section-title">Full Stock Plan</h2>
+      </div>
+      <div class="table-responsive">
+        <table id="stockTable" class="table table-custom display" style="width:100%">
+          <thead><tr><th>Rank</th><th>Product ID</th><th>Category</th><th>Avg Impulse Score</th><th>Total Sold</th><th>Stock Qty</th><th>Priority</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ TAB 4: ANALYTICS ════════ -->
+<div class="tab-pane fade" id="tab-analytics">
+  <div id="analyticsLoading" class="loading-block section-card">
+    <div class="spinner-border text-primary" role="status"></div>
+    <span>Loading analytics data...</span>
+  </div>
+  <div id="analyticsContent" style="display:none">
+
+    <!-- KPI Row -->
+    <div class="row g-3 mb-4" id="analyticsKpiRow"></div>
+
+    <!-- Row 1: Cluster pie + Score distribution -->
+    <div class="row g-4 mb-4">
+      <div class="col-md-4">
+        <div class="chart-box">
+          <div class="chart-title">Cluster Distribution</div>
+          <div id="clusterPieChart" class="chart-div" style="height:300px"></div>
+        </div>
+      </div>
+      <div class="col-md-8">
+        <div class="chart-box">
+          <div class="chart-title">Impulse Score Distribution</div>
+          <div id="scoreDistChart" class="chart-div" style="height:300px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 2: Cluster score bar + Nudge breakdown -->
+    <div class="row g-4 mb-4">
+      <div class="col-md-6">
+        <div class="chart-box">
+          <div class="chart-title">Impulse Threshold by Cluster</div>
+          <div id="clusterScoreBar" class="chart-div" style="height:260px"></div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="chart-box">
+          <div class="chart-title">Nudge Type Breakdown (total counts)</div>
+          <div id="nudgeBreakdownChart" class="chart-div" style="height:260px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 2b: Cluster avg scores + Nudge playbook -->
+    <div class="row g-4 mb-4">
+      <div class="col-md-5">
+        <div class="chart-box">
+          <div class="chart-title">Avg Impulse Score by Cluster</div>
+          <div id="clusterAvgScoreChart" class="chart-div" style="height:280px"></div>
+        </div>
+      </div>
+      <div class="col-md-7">
+        <div class="section-card" style="margin-bottom:0;height:100%">
+          <div class="section-header" style="margin-bottom:14px;padding-bottom:10px">
+            <h2 class="section-title">Nudge Playbook by Cluster</h2>
+          </div>
+          <div class="row g-3" id="nudgePlaybookCards"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 3: Engagement scatter + Session duration -->
+    <div class="row g-4 mb-4">
+      <div class="col-md-6">
+        <div class="chart-box">
+          <div class="chart-title">Engagement Intensity vs Impulse Score</div>
+          <div id="engagementScatterChart" class="chart-div" style="height:260px"></div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="chart-box">
+          <div class="chart-title">Session Duration Distribution by Cluster</div>
+          <div id="sessionDurationChart" class="chart-div" style="height:260px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 4: Region comparison (3 charts) -->
+    <div class="section-card mb-4">
+      <div class="section-header">
+        <h2 class="section-title">Region Comparison</h2>
+      </div>
+      <div class="row g-4">
+        <div class="col-md-4">
+          <div class="chart-box">
+            <div class="chart-title">Users per Region</div>
+            <div id="regionUsersChart" class="chart-div" style="height:260px"></div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="chart-box">
+            <div class="chart-title">Sessions per Region</div>
+            <div id="regionSessionsChart" class="chart-div" style="height:260px"></div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="chart-box">
+            <div class="chart-title">Avg Impulse Score per Region</div>
+            <div id="regionScoreChart" class="chart-div" style="height:260px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Region summary table -->
+    <div class="section-card">
+      <div class="section-header">
+        <h2 class="section-title">Region Summary Table</h2>
+      </div>
+      <div class="table-responsive">
+        <table id="regionSummaryTable" class="table table-custom display" style="width:100%">
+          <thead>
+            <tr>
+              <th>Region</th>
+              <th>Users</th>
+              <th>Sessions</th>
+              <th>Avg Impulse Score</th>
+              <th>Total Sold</th>
+              <th>Rating</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<script src="/static/js/dashboard.js"></script>
+</body>
+</html>
